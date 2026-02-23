@@ -1,0 +1,512 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+
+#define MAX_USER_LEN 50
+#define MAX_PASS_LEN 50
+#define LINE_BUF 256
+#define USERS_FILE "users.txt"
+
+void show_menu();
+void register_user();
+void login_user();
+void clear_input_buffer();
+void buy_rent();
+void view_history();
+void buying_section();
+void renting_section();
+void pre_owned_buying();
+void new_car_buying();
+
+int username_exists(const char *username);
+int save_user_to_file(const char *username, const char *password);
+int find_password_by_username(const char *username, char *out_password);
+
+char file_username[MAX_USER_LEN + 1];
+char file_password[MAX_PASS_LEN + 1];
+
+int main() {
+    int choice = 0;
+
+    printf("\n=========================================\n");
+    printf("|         Car Management System         |\n");
+    printf("=========================================\n");
+
+    while (1) {
+        show_menu();
+        printf("Enter option number: ");
+
+        if (scanf("%d", &choice) != 1) {
+            printf("Invalid input. Please enter a number.\n");
+            clear_input_buffer();
+            continue;
+        }
+
+        clear_input_buffer();
+
+        if (choice == 1) {
+            login_user();
+        } 
+        else if (choice == 2) {
+            register_user();
+        } 
+        else if (choice == 3) {
+            view_history();
+        } 
+        else if (choice == 4) {
+            printf("Exiting program. Goodbye!\n");
+            break;
+        } 
+        else {
+            printf("Unknown option. Please try again.\n");
+        }
+    }
+
+    return 0;
+}
+
+void show_menu() {
+    printf("\n================ (MAIN MENU) ===============\n");
+    printf("1. Login\n");
+    printf("2. Register\n");
+    printf("3. View History\n");
+    printf("4. Exit\n");
+    printf("============================================\n\n");
+}
+
+// -------------------- REGISTER --------------------
+void register_user() {
+    char username[MAX_USER_LEN + 1];
+    char password[MAX_PASS_LEN + 1];
+    char password_confirm[MAX_PASS_LEN + 1];
+
+    printf("\n=== REGISTER ===\n");
+
+    while (1) {
+        printf("Enter username (no space): ");
+        if (scanf("%50s", username) != 1) {
+            printf("Input error. Try again.\n");
+            clear_input_buffer();
+            continue;
+        }
+        clear_input_buffer();
+
+        if (strcmp(username, "0") == 0) {
+            printf("Registration cancelled.\n");
+            return;
+        }
+
+        if (username_exists(username)) {
+            printf("Username already exists. Please choose another.\n");
+            continue;
+        }
+
+        break;
+    }
+
+    while (1) {
+        printf("Enter password (min 4 chars): ");
+        if (scanf("%50s", password) != 1) {
+            printf("Input error. Try again.\n");
+            clear_input_buffer();
+            continue;
+        }
+        clear_input_buffer();
+
+        if (strlen(password) < 4) {
+            printf("Password too short. Try again.\n");
+            continue;
+        }
+
+        printf("Confirm password: ");
+        scanf("%50s", password_confirm);
+        clear_input_buffer();
+
+        if (strcmp(password, password_confirm) != 0) {
+            printf("Passwords do not match.\n");
+            continue;
+        }
+
+        break;
+    }
+
+    if (save_user_to_file(username, password)) {
+        printf("Registration successful! You can now login.\n");
+    } else {
+        printf("Error saving user.\n");
+    }
+}
+
+
+// -------------------- LOGIN --------------------
+void login_user() {
+    char username[MAX_USER_LEN + 1];
+    char password[MAX_PASS_LEN + 1];
+    char stored_password[MAX_PASS_LEN + 1];
+
+    printf("\n=== LOGIN ===\n");
+    printf("Enter username: ");
+    scanf("%50s", username);
+    clear_input_buffer();
+
+    int found = find_password_by_username(username, stored_password);
+    if (found <= 0) {
+        printf("User not found. Please register first.\n");
+        return;
+    }
+
+    printf("Enter password: ");
+    scanf("%50s", password);
+    clear_input_buffer();
+
+    if (strcmp(password, stored_password) == 0) {
+        printf("\nLogin successful! Welcome, %s.\n", username);
+        buy_rent();
+    } else {
+        printf("Incorrect password.\n");
+    }
+}
+
+// -------------------- USER FILE FUNCTIONS --------------------
+int username_exists(const char *username) {
+    
+    FILE *fp = fopen(USERS_FILE, "r");
+    if (!fp) return 0;
+
+    while (fscanf(fp, "%49[^|]|%49s\n", file_username, file_password) == 2) {
+        if (strcmp(file_username, username) == 0) {
+            fclose(fp);
+            return 1;
+        }
+    }
+    fclose(fp);
+    return 0;
+}
+
+int save_user_to_file(const char *username, const char *password) {
+    FILE *fp = fopen(USERS_FILE, "a");
+    if (!fp) return 0;
+    fprintf(fp, "%s|%s\n", username, password);
+    fclose(fp);
+    return 1;
+}
+
+int find_password_by_username(const char *username, char *out_password) {
+    FILE *fp = fopen("users.txt", "r");
+    if (!fp) return -1;
+
+    while (fscanf(fp, "%49[^|]|%49s\n", file_username, file_password) == 2) {
+        if (strcmp(file_username, username) == 0) {
+            strcpy(out_password, file_password);
+            fclose(fp);
+            return 1;
+        }
+    }
+    fclose(fp);
+    return 0;
+}
+
+// -------------------- BUY / RENT MAIN MENU --------------------
+void buy_rent() {
+
+    int selection = 0;
+
+    while (1) {
+        printf("\n======== Car Management Menu ========\n");
+        printf("1) Buy Car\n");
+        printf("2) Rent Car\n");
+        printf("3) Exit to Main Menu\n");
+        printf("------------------------------------\n");
+        printf("Enter your choice: ");
+        scanf("%d", &selection);
+        clear_input_buffer();
+
+        switch (selection) {
+            case 1:
+                buying_section();
+                break;
+
+            case 2:
+                renting_section();
+                break;
+
+            case 3:
+                printf("Returning to main menu...\n");
+                return;
+
+            default:
+                printf("Invalid input. Try again.\n");
+        }
+    }
+}
+
+
+// -------------------- BUYING SECTION --------------------
+void buying_section() {
+    int type_choice;
+    while (1) {
+        printf("\n=== BUY A CAR ===\n");
+        printf("1) New Car\n");
+        printf("2) Pre-Owned Car\n");
+        printf("3) Exit to Previous Menu\n");
+        printf("-----------------------------\n");
+        printf("Enter your choice: ");
+        scanf("%d", &type_choice);
+        clear_input_buffer();
+
+        switch (type_choice) {
+            case 1:
+                printf("\nYou selected: New Car Buying Section.\n");
+                printf("Available Models:\n1) Tata Nexon\n2) Hyundai i20\n3) Mahindra XUV700\n\n");
+                new_car_buying(); // i added this line
+                break;
+
+            case 2:
+                printf("\nYou selected: Pre-Owned Car Buying Section.\n");
+                printf("Available Models:\n1) Honda City 2019\n2) Maruti Swift 2020\n3) Hyundai Creta 2018\n\n");
+                pre_owned_buying();  // i added this line
+                break;
+
+            case 3:
+                printf("Returning to main menu...\n");
+                return;
+
+            default:
+                printf("Invalid choice. Try again.\n");
+        }
+    }
+}
+
+// -------------------- RENTING SECTION --------------------
+void renting_section() {
+    int type_choice;
+    while (1) {
+        printf("\n=== RENT A CAR ===\n");
+        printf("1) New Car for Rent\n");
+        printf("2) Pre-Owned Car for Rent\n");
+        printf("3) Exit to Previous Menu\n");
+        printf("-----------------------------\n");
+        printf("Enter your choice: ");
+        scanf("%d", &type_choice);
+        clear_input_buffer();
+
+        switch (type_choice) {
+            case 1:
+                printf("\nYou selected: New Car Rental Section.\n");
+                printf("Available for rent:\n1) Toyota Innova\n2) Mahindra Scorpio\n3) Maruti Ciaz\n\n");
+                break;
+
+            case 2:
+                printf("\nYou selected: Pre-Owned Car Rental Section.\n");
+                printf("Available for rent:\n1) Tata Nexon 2018\n2) Hyundai i20 2019\n3) Maruti Swift 2017\n\n");
+                break;
+
+            case 3:
+                printf("Returning to main menu...\n");
+                return;
+
+            default:
+                printf("Invalid choice. Try again.\n");
+        }
+    }
+}
+
+
+// -------------------- VIEW HISTORY --------------------
+void view_history() {
+    FILE *fp_purchase, *fp_rent;
+    char line[300];
+    int choice;
+
+    while (1) {
+        printf("\n=== VIEW HISTORY MENU ===\n");
+        printf("1) View Purchase History\n");
+        printf("2) View Rental History\n");
+        printf("3) Return to Main Menu\n");
+        printf("----------------------------\n");
+        printf("Enter your choice: ");
+        scanf("%d", &choice);
+
+        if (choice == 3) {
+            printf("Returning to main menu...\n");
+            break;
+        }
+
+        if (choice == 1) {
+            fp_purchase = fopen("purchases.txt", "r");
+            if (!fp_purchase) {
+                printf("\nNo purchase records found yet.\n");
+                continue;
+            }
+            printf("\n=== PURCHASE HISTORY ===\n");
+            int count = 0;
+            while (fgets(line, sizeof(line), fp_purchase))
+                printf("%d) %s", ++count, line);
+            fclose(fp_purchase);
+        } 
+        else if (choice == 2) {
+            fp_rent = fopen("rentals.txt", "r");
+            if (!fp_rent) {
+                printf("\nNo rental records found yet.\n");
+                continue;
+            }
+            printf("\n=== RENTAL HISTORY ===\n");
+            int count = 0;
+            while (fgets(line, sizeof(line), fp_rent))
+                printf("%d) %s", ++count, line);
+            fclose(fp_rent);
+        } 
+        else {
+            printf("Invalid choice. Try again.\n");
+        }
+    }
+}
+
+
+void clear_input_buffer() {
+    int c;
+    while ((c = getchar()) != '\n' && c != EOF);
+}
+
+void pre_owned_buying()
+{
+    int choice;
+    double price;
+    char car[100];
+
+    while (1)
+    {
+        printf("Select a pre-owned car to buy:\n");
+        printf("1) Honda City 2019\n");
+        printf("2) Maruti Swift 2020\n");
+        printf("3) Hyundai Creta 2018\n");
+        printf("4) Exit to Previous Menu\n");
+        printf("Enter choice (1-4): ");
+
+        if (scanf("%d", &choice) != 1)
+        {
+            clear_input_buffer();
+            continue;
+        }
+
+        clear_input_buffer();
+
+        if (choice == 4)
+        {
+            printf("Exiting to previous menu...\n");
+            return;
+        }
+
+        if (choice == 1)
+        {
+            strcpy(car, "Honda City 2019");
+            price = 12000;
+        }
+
+        else if (choice == 2)
+        {
+            strcpy(car, "Maruti Swift 2020");
+            price = 10000;
+        }
+
+        else if (choice == 3)
+        {
+            strcpy(car, "Hyundai Creta 2018");
+            price = 14000;
+        }
+
+        else
+        {
+            printf("Invalid choice! Please enter 1-4.\n");
+            continue;
+        }
+
+        printf("You selected: %s — Price: $%.2f\n", car, price);
+
+        printf("Do you want to proceed with the purchase? (1 = Yes, 2 = No): ");
+
+        int confirm;
+
+        if (scanf("%d", &confirm) != 1)
+        {
+            clear_input_buffer();
+            continue;
+        }   
+
+        clear_input_buffer();
+    }
+
+}
+
+
+
+
+void new_car_buying() {
+
+    int choice;
+    double price;
+    char car[100];
+
+    while (1)
+    {
+        printf("Select a car to buy:\n");
+        printf("1) Tata Nexon\n");
+        printf("2) Hyundai i20\n");
+        printf("3) Mahindra XUV700\n");
+        printf("4) Exit to Previous Menu\n");
+        printf("Enter choice (1-4): ");
+
+        if (scanf("%d", &choice) != 1)
+        {
+            clear_input_buffer();
+            continue;
+        }
+
+        clear_input_buffer();
+
+        if (choice == 4)
+        {
+            printf("Exiting to previous menu...\n");
+            return;
+        }
+
+        if (choice == 1)
+        {
+            strcpy(car, "Tata Nexon");
+            price = 15000;
+        }
+
+        else if (choice == 2)
+        {
+            strcpy(car, "Hyundai i20");
+            price = 13000;
+        }
+
+        else if (choice == 3)
+        {
+            strcpy(car, "Mahindra XUV700");
+            price = 25000;
+        }
+
+        else
+        {
+            printf("Invalid choice! Please enter 1-4.\n");
+            continue;
+        }
+
+        printf("You selected: %s — Price: $%.2f\n", car, price);
+
+        printf("Do you want to proceed with the purchase? (1 = Yes, 2 = No): ");
+
+        int confirm;
+
+        if (scanf("%d", &confirm) != 1)
+        {
+            clear_input_buffer();
+            continue;
+        }   
+
+        clear_input_buffer();
+    }
+}
